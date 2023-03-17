@@ -1,0 +1,148 @@
+---
+title: "Auc1001"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(styler)
+library(caret)
+library(glmnet)
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+bidZipPopIncome <- read.csv('data/bid_zip_pop_income.csv') 
+bidZipPopIncome <- drop_na(bidZipPopIncome) 
+slice_sample(bidZipPopIncome, n=5)
+ggplot(data = bidZipPopIncome, aes(x = popPerIncome, y = off_air_opening_price)) + geom_line() + labs(x = "Population / Household Income", y = "Off Air Opening Price") + theme_minimal()
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+bids <- read_csv("data/merged_bid_data.csv")
+slice_sample(bids, n=10)
+dim(bids)
+```
+
+```{r}
+ggplot(data = na.omit(bids), aes(x=population, y=compensation, color=pre_auction_band)) + geom_point() + theme_light() + labs(x="Population", y="Bid", color="Pre Auction Band")
+```
+
+```{r}
+ggplot(data=bids, 
+       aes(x=population, 
+           y=compensation, 
+           color=pre_auction_band)) + geom_point() + theme_light() + 
+  labs(
+    x="Population", 
+    y="Bid", 
+    color="Pre Auction Band") + facet_grid(. ~ winning_bid_option)
+
+```
+
+```{r}
+bigBids <- bids %>% 
+  filter(compensation > 100000000) %>% 
+  select(bidder, compensation)
+
+bigBids
+```
+
+```{r}
+bidPer <- read_csv("data/merged_bid_data.csv")
+bidPer$age = as.numeric(bidPer$age)
+slice_sample(bidPer,n=5)
+```
+
+```{r}
+cleanBidPer <- na.omit(bidPer)
+
+if (max(cleanBidPer$compensation) > 1000000){
+  cleanBidPer$compensation = cleanBidPer$compensation / 1000000
+}
+
+bidBiddersBand <- ggplot(data=cleanBidPer, aes(x=num_bidders, y=compensation, color=pre_auction_band)) + theme_minimal() + geom_point() + labs(x = "Number of Bidders", y = "Final Bid", color = "Pre Auction Band")
+bidBiddersBand
+```
+
+```{r}
+compBidModel <- lm(
+  data=cleanBidPer, 
+  compensation ~ age + population + num_bidders)
+
+summary(compBidModel)
+```
+
+```{r}
+win_bids_area <- read_csv('data/merged_bid_area.csv')
+
+slice_head(win_bids_area, n=10)
+```
+
+```{r scale down bids - win_bids_area}
+if (max(win_bids_area$compensation) > 1000000){
+  win_bids_area$compensation = win_bids_area$compensation / 1000000
+}
+```
+
+```{r}
+
+areaBidModel <- lm(
+    data= win_bids_area, 
+    compensation ~ Area + Population)
+
+summary(areaBidModel)
+```
+
+```{r - merged demographic}
+demographic_bids <- read_csv('data/merged_demographic.csv')
+```
+
+```{r scale down bids - demographic_bids}
+if (max(demographic_bids$compensation) > 1000000){
+  demographic_bids$compensation = demographic_bids$compensation / 1000000
+}
+```
+
+```{r - demographic model}
+demographic_model <- lm(data=demographic_bids, 
+                        compensation ~ . - zipcode - facility_id)
+summary(demographic_model)
+```
+
+```{r best model selection - demographic_model}
+set.seed(123)
+
+y <- demographic_bids$compensation
+x <- model.matrix(compensation ~ . - facility_id - zipcode,
+                  data = demographic_bids)
+
+m_lasso_cv <- cv.glmnet(x, y, alpha = 1)
+
+```
+
+```{r lambda selection}
+
+best_lambda <- m_lasso_cv$lambda.min
+best_lambda
+```
+
+```{r final model creation}
+best_demographic_model <- glmnet(x, y, alpha = 1, lambda=best_lambda)
+
+best_demographic_model$beta
+```

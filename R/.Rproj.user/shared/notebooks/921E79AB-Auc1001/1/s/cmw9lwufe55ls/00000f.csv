@@ -1,0 +1,5 @@
+"0","cleanBidPer %>% 
+  compensation = compensation / 1000000
+"
+"2","Error: object 'compensation' not found
+"

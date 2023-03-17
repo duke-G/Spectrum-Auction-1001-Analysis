@@ -1,0 +1,5 @@
+"0","ggplot(data=cleanBidPer, aes(x=num_bidders, y=compensation, color=pre_auction_band)) + theme_minimal() + geom_point() + labs(x = ""Number of Bidders"", y = ""Final Bid"", color = ""Pre Auction Band"")
+"
+"2","Error in ggplot(data = cleanBidPer, aes(x = num_bidders, y = compensation,  : 
+  could not find function ""ggplot""
+"
